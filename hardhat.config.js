@@ -8,71 +8,91 @@
 // - COINMARKETCAP: coinmarketcap api key for USD value in gas report
 // - CI:            output gas report to file instead of stdout
 
-const fs = require('fs');
-const path = require('path');
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
-const { argv } = require('yargs/yargs')()
-  .env('')
+import yargs from "yargs/yargs";
+import { hideBin } from "yargs/helpers";
+
+// Hardhat plugins (ESM side-effect imports)
+import "@nomicfoundation/hardhat-chai-matchers";
+import "@nomicfoundation/hardhat-ethers";
+import "hardhat-exposed";
+import "hardhat-gas-reporter";
+import "hardhat-ignore-warnings";
+import "hardhat-predeploy";
+import "solidity-coverage";
+import "solidity-docgen";
+
+// Resolve __dirname in ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Parse CLI args + env (no prefix)
+const argv = yargs(hideBin(process.argv))
+  .env("")
   .options({
     // Compilation settings
     compiler: {
-      alias: 'compileVersion',
-      type: 'string',
-      default: '0.8.27',
+      alias: "compileVersion",
+      type: "string",
+      default: "0.8.27",
     },
     src: {
-      alias: 'source',
-      type: 'string',
-      default: 'contracts',
+      alias: "source",
+      type: "string",
+      default: "contracts",
     },
     runs: {
-      alias: 'optimizationRuns',
-      type: 'number',
+      alias: "optimizationRuns",
+      type: "number",
       default: 200,
     },
     ir: {
-      alias: 'enableIR',
-      type: 'boolean',
+      alias: "enableIR",
+      type: "boolean",
       default: false,
     },
     evm: {
-      alias: 'evmVersion',
-      type: 'string',
-      default: 'prague',
+      alias: "evmVersion",
+      type: "string",
+      default: "prague",
     },
     // Extra modules
     coverage: {
-      type: 'boolean',
+      type: "boolean",
       default: false,
     },
     gas: {
-      alias: 'enableGasReport',
-      type: 'boolean',
+      alias: "enableGasReport",
+      type: "boolean",
       default: false,
     },
     coinmarketcap: {
-      alias: 'coinmarketcapApiKey',
-      type: 'string',
+      alias: "coinmarketcapApiKey",
+      type: "string",
     },
-  });
+  })
+  .parseSync();
 
-require('@nomicfoundation/hardhat-chai-matchers');
-require('@nomicfoundation/hardhat-ethers');
-require('hardhat-exposed');
-require('hardhat-gas-reporter');
-require('hardhat-ignore-warnings');
-require('hardhat-predeploy');
-require('solidity-coverage');
-require('solidity-docgen');
-
-for (const f of fs.readdirSync(path.join(__dirname, 'hardhat'))) {
-  require(path.join(__dirname, 'hardhat', f));
+// Dynamically load any extra Hardhat task files in ./hardhat
+const hardhatTasksDir = path.join(__dirname, "hardhat");
+if (fs.existsSync(hardhatTasksDir)) {
+  for (const f of fs.readdirSync(hardhatTasksDir)) {
+    // Import only JS/MJS/TS files (skip dotfiles, maps, etc.)
+    if (/\.(mjs|cjs|js|ts)$/.test(f) && !f.endsWith(".d.ts")) {
+      // eslint-disable-next-line no-await-in-loop
+      await import(pathToFileURL(path.join(hardhatTasksDir, f)).href);
+    }
+  }
 }
 
-/**
- * @type import('hardhat/config').HardhatUserConfig
- */
-module.exports = {
+// Import docgen config (CJS modules will appear as the default export)
+import docgenConfig from "./docs/config";
+
+// Hardhat config (ESM export)
+const config = /** @type {import('hardhat/config').HardhatUserConfig} */ ({
   solidity: {
     version: argv.compiler,
     settings: {
@@ -82,25 +102,25 @@ module.exports = {
       },
       evmVersion: argv.evm,
       viaIR: argv.ir,
-      outputSelection: { '*': { '*': ['storageLayout'] } },
+      outputSelection: { "*": { "*": ["storageLayout"] } },
     },
   },
   warnings: {
-    'contracts-exposed/**/*': {
-      'code-size': 'off',
-      'initcode-size': 'off',
+    "contracts-exposed/**/*": {
+      "code-size": "off",
+      "initcode-size": "off",
     },
-    '*': {
-      'unused-param': !argv.coverage, // coverage causes unused-param warnings
-      'transient-storage': false,
-      default: 'error',
+    "*": {
+      "unused-param": !argv.coverage, // coverage causes unused-param warnings
+      "transient-storage": false,
+      default: "error",
     },
   },
   networks: {
     hardhat: {
       hardfork: argv.evm,
-      // Exposed contracts often exceed the maximum contract size. For normal contract,
-      // we rely on the `code-size` compiler warning, that will cause a compilation error.
+      // Exposed contracts often exceed the maximum contract size. For normal contracts,
+      // we rely on the `code-size` compiler warning, which will cause a compilation error.
       allowUnlimitedContractSize: true,
       initialBaseFeePerGas: argv.coverage ? 0 : undefined,
       enableRip7212: true,
@@ -109,17 +129,19 @@ module.exports = {
   exposed: {
     imports: true,
     initializers: true,
-    exclude: ['vendor/**/*', '**/*WithInit.sol'],
+    exclude: ["vendor/**/*", "**/*WithInit.sol"],
   },
   gasReporter: {
     enabled: argv.gas,
     showMethodSig: true,
     includeBytecodeInJSON: true,
-    currency: 'USD',
+    currency: "USD",
     coinmarketcap: argv.coinmarketcap,
   },
   paths: {
     sources: argv.src,
   },
-  docgen: require('./docs/config'),
-};
+  docgen: docgenConfig,
+});
+
+export default config;
