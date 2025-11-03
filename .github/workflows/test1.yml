@@ -23,7 +23,6 @@ jobs:
         run: npm install @openzeppelin/contracts@5.5.0
       - name: Compile contracts
         run: npx hardhat compile
-        working-directory: solidity_learning
       - name: Run Analysis
         uses: outdef/contract-vulnerability-action@v0.1.0
         with:
