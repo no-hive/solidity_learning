@@ -1,2 +1,32 @@
-- name: Contract Vulnerability Detection
-  uses: outdef/contract-vulnerability-action@v0.1.0
+jobs:
+  analysis:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/contracts
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: "16.x"
+          cache: "npm"
+      - name: Install dependencies
+        run: npm install
+      - name: Compile contracts
+        run: npx hardhat compile
+      - name: Run Analysis
+        uses: outdef/contract-vulnerability-action
+        with:
+          solc-version: 0.8.17
+          workdir: "packages/contracts"
+          files: .
+          format: "text"
+          test-mode: "assertion"
+          echidna-contract: Token,Stake,DAO
+          crytic-args: --hardhat-ignore-compile
+          target: "."
+          fail-on: "medium"
+          slither-config: "slither.config.json"
+          mythril-args: "--solc-json mythril.config.json"
+          mythril-contract: "contracts/Token.sol,contracts/Stake.sol,contracts/Dao.sol"
