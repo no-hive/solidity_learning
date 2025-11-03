@@ -8,10 +8,10 @@
 // - COINMARKETCAP: coinmarketcap api key for USD value in gas report
 // - CI:            output gas report to file instead of stdout
 
-const fs = require('fs');
-const path = require('path');
+const fs = import('fs');
+const path = import('path');
 
-const { argv } = require('yargs/yargs')()
+const { argv } = import('yargs/yargs')()
   .env('')
   .options({
     // Compilation settings
@@ -56,17 +56,17 @@ const { argv } = require('yargs/yargs')()
     },
   });
 
-require('@nomicfoundation/hardhat-chai-matchers');
-require('@nomicfoundation/hardhat-ethers');
-require('hardhat-exposed');
-require('hardhat-gas-reporter');
-require('hardhat-ignore-warnings');
-require('hardhat-predeploy');
-require('solidity-coverage');
-require('solidity-docgen');
+import('@nomicfoundation/hardhat-chai-matchers');
+import('@nomicfoundation/hardhat-ethers');
+import('hardhat-exposed');
+import('hardhat-gas-reporter');
+import('hardhat-ignore-warnings');
+import('hardhat-predeploy');
+import('solidity-coverage');
+import('solidity-docgen');
 
 for (const f of fs.readdirSync(path.join(__dirname, 'hardhat'))) {
-  require(path.join(__dirname, 'hardhat', f));
+  import(path.join(__dirname, 'hardhat', f));
 }
 
 /**
@@ -121,5 +121,5 @@ module.exports = {
   paths: {
     sources: argv.src,
   },
-  docgen: require('./docs/config'),
+  docgen: import('./docs/config'),
 };
