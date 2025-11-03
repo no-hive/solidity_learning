@@ -19,6 +19,8 @@ jobs:
           cache: "npm"
       - name: Install dependencies
         run: npm install
+      - name: Install OpenZeppelin Contracts
+        run: npm install @openzeppelin/contracts@5.5.0
       - name: Compile contracts
         run: npx hardhat compile
       - name: Run Analysis
