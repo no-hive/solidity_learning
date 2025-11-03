@@ -17,12 +17,16 @@ jobs:
         with:
           node-version: "16.x"
           cache: "npm"
+          working-directory: contracts
       - name: Install dependencies
         run: npm install
+        working-directory: contracts
       - name: Install OpenZeppelin Contracts
         run: npm install @openzeppelin/contracts@5.5.0
+        working-directory: contracts
       - name: Compile contracts
         run: npx hardhat compile
+        working-directory: contracts
       - name: Run Analysis
         uses: outdef/contract-vulnerability-action@v0.1.0
         with:
