@@ -1,0 +1,2 @@
+- name: Contract Vulnerability Detection
+  uses: outdef/contract-vulnerability-action@v0.1.0
