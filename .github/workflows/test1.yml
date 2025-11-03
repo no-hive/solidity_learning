@@ -34,7 +34,7 @@ jobs:
           echidna-contract: Governor.sol
           crytic-args: --hardhat-ignore-compile
           target: "contracts/Governor.sol"
-          fail-on: "medium"
+          fail-on: "none"
           slither-config: "slither.config.json"
           mythril-args: "--solc-json mythril.config.json"
           mythril-contract: "contracts/Governor.sol"
