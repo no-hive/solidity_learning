@@ -16,7 +16,7 @@ jobs:
       - name: Compile contracts
         run: npx hardhat compile
       - name: Run Analysis
-        uses: uses: outdef/contract-vulnerability-action@v0.1.0
+        uses: outdef/contract-vulnerability-action@v0.1.0
         with:
           solc-version: 0.8.24
           workdir: "contracts"
