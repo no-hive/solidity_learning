@@ -1,97 +1,73 @@
-/// ENVVAR
-// - COMPILER:      compiler version (default: 0.8.27)
-// - SRC:           contracts folder to compile (default: contracts)
-// - RUNS:          number of optimization runs (default: 200)
-// - IR:            enable IR compilation (default: false)
-// - COVERAGE:      enable coverage report (default: false)
-// - GAS:           enable gas report (default: false)
-// - COINMARKETCAP: coinmarketcap api key for USD value in gas report
-// - CI:            output gas report to file instead of stdout
+// ESM: Все импорты на верхнем уровне, без require
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-const fs = import('fs');
-const path = import('path');
+// Импорт Hardhat-плагинов
+import '@nomicfoundation/hardhat-chai-matchers';
+import '@nomicfoundation/hardhat-ethers';
+import 'hardhat-exposed';
+import 'hardhat-gas-reporter';
+import 'hardhat-ignore-warnings';
+import 'hardhat-predeploy';
+import 'solidity-coverage';
+import 'solidity-docgen';
 
-const { argv } = import('yargs/yargs')()
+// ESM-способ определить __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Yargs для разбора опций CLI/ENV-переменных
+import yargs from 'yargs/yargs';
+import { hideBin } from 'yargs/helpers';
+const argv = yargs(hideBin(process.argv))
   .env('')
   .options({
-    // Compilation settings
-    compiler: {
-      alias: 'compileVersion',
-      type: 'string',
-      default: '0.8.27',
-    },
-    src: {
-      alias: 'source',
-      type: 'string',
-      default: 'contracts',
-    },
-    runs: {
-      alias: 'optimizationRuns',
-      type: 'number',
-      default: 200,
-    },
-    ir: {
-      alias: 'enableIR',
-      type: 'boolean',
-      default: false,
-    },
-    evm: {
-      alias: 'evmVersion',
-      type: 'string',
-      default: 'prague',
-    },
-    // Extra modules
-    coverage: {
-      type: 'boolean',
-      default: false,
-    },
-    gas: {
-      alias: 'enableGasReport',
-      type: 'boolean',
-      default: false,
-    },
-    coinmarketcap: {
-      alias: 'coinmarketcapApiKey',
-      type: 'string',
-    },
-  });
+    compiler: { type: 'string', default: process.env.COMPILER || '0.8.27' },
+    src: { type: 'string', default: process.env.SRC || 'contracts' },
+    runs: { type: 'number', default: process.env.RUNS ? Number(process.env.RUNS) : 200 },
+    ir: { type: 'boolean', default: process.env.IR === 'true' },
+    evm: { type: 'string', default: process.env.EVM || 'prague' },
+    coverage: { type: 'boolean', default: process.env.COVERAGE === 'true' },
+    gas: { type: 'boolean', default: process.env.GAS === 'true' },
+    coinmarketcap: { type: 'string', default: process.env.COINMARKETCAP },
+  })
+  .parseSync();
 
-import('@nomicfoundation/hardhat-chai-matchers');
-import('@nomicfoundation/hardhat-ethers');
-import('hardhat-exposed');
-import('hardhat-gas-reporter');
-import('hardhat-ignore-warnings');
-import('hardhat-predeploy');
-import('solidity-coverage');
-import('solidity-docgen');
+// Если требуется динамически прогрузить дополнительные Hardhat таски
+if (fs.existsSync(path.join(__dirname, 'hardhat'))) {
+  const taskFiles = fs.readdirSync(path.join(__dirname, 'hardhat'));
+  for (const f of taskFiles) {
+    // Динамический ESM импорт
+    await import(path.join(__dirname, 'hardhat', f));
+  }
+}
 
-for (const f of fs.readdirSync(path.join(__dirname, 'hardhat'))) {
-  import(path.join(__dirname, 'hardhat', f));
+// Импортируйте док-ген config корректно
+let docgenConfig = {};
+try {
+  docgenConfig = (await import('./docs/config.js')).default;
+} catch (e) {
+  // если нет docgen, игнорим
 }
 
 /**
- * @type import('hardhat/config').HardhatUserConfig
+ * Конфиг Hardhat. Экспорт производится через 'export default'
  */
-module.exports = {
+export default {
   solidity: {
     version: argv.compiler,
     settings: {
-      optimizer: {
-        enabled: true,
-        runs: argv.runs,
-      },
+      optimizer: { enabled: true, runs: argv.runs },
       evmVersion: argv.evm,
       viaIR: argv.ir,
       outputSelection: { '*': { '*': ['storageLayout'] } },
     },
   },
   warnings: {
-    'contracts-exposed/**/*': {
-      'code-size': 'off',
-      'initcode-size': 'off',
-    },
+    'contracts-exposed/**/*': { 'code-size': 'off', 'initcode-size': 'off' },
     '*': {
-      'unused-param': !argv.coverage, // coverage causes unused-param warnings
+      'unused-param': !argv.coverage,
       'transient-storage': false,
       default: 'error',
     },
@@ -99,8 +75,6 @@ module.exports = {
   networks: {
     hardhat: {
       hardfork: argv.evm,
-      // Exposed contracts often exceed the maximum contract size. For normal contract,
-      // we rely on the `code-size` compiler warning, that will cause a compilation error.
       allowUnlimitedContractSize: true,
       initialBaseFeePerGas: argv.coverage ? 0 : undefined,
       enableRip7212: true,
@@ -118,8 +92,6 @@ module.exports = {
     currency: 'USD',
     coinmarketcap: argv.coinmarketcap,
   },
-  paths: {
-    sources: argv.src,
-  },
-  docgen: import('./docs/config'),
+  paths: { sources: argv.src },
+  docgen: docgenConfig,
 };
